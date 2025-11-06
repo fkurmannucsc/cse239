@@ -1,0 +1,44 @@
+services:
+  worker:
+    build: .
+    command: python worker.py
+    networks:
+      - mapreduce-network
+    volumes:
+      - ./txt:/app/txt
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+      replicas: ${NUM_WORKERS:-3}
+
+  coordinator:
+    build: .
+    container_name: coordinator
+    command: python coordinator.py
+    networks:
+      - mapreduce-network
+    volumes:
+      - ./txt:/app/txt
+    environment:
+      # These values are now controlled by NUM_WORKERS in the .env file
+      - NUM_MAP_WORKERS=${NUM_WORKERS:-3}
+      - NUM_REDUCE_WORKERS=${NUM_WORKERS:-3}
+      # Timeouts in seconds for map and reduce tasks. Increased for larger datasets.
+      - TASK_TIMEOUT=300
+      - REDUCE_TASK_TIMEOUT=600
+      - DATASET_URL=https://mattmahoney.net/dc/enwik9.zip
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+networks:
+  mapreduce-network:
+    driver: bridge
